@@ -3,16 +3,20 @@
 float glob_temperature = 1;
 float glob_humidity = 1;
 
-DHT20 DHT(&Wire1);
+DHT20 DHT(&Wire);
 
 void taskTempHumi(void* pvParameters) {
-    Wire1.begin(11, 12);
+    Wire.begin(11, 12);
     delay(2000);
     while (1) {
         DHT.read();
-        Serial.print(DHT.getHumidity(), 1);
-        Serial.print(",\t");
-        Serial.println(DHT.getTemperature(), 1);
+        glob_humidity = DHT.getHumidity();
+        glob_temperature = DHT.getTemperature();
+        Serial.print("Humi: ");
+        Serial.print(glob_humidity, 1);
+        Serial.print(" %,\tTemp: ");
+        Serial.print(glob_temperature, 1);
+        Serial.println(" C");
         vTaskDelay(5000);
     }
 }
