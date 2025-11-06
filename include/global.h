@@ -8,5 +8,6 @@
 
 extern float glob_temperature;
 extern float glob_humidity;
+extern bool glob_pump_state;
 
 #endif
