@@ -54,6 +54,9 @@
 // Khoảng thời gian gửi dữ liệu (milliseconds)
 #define FIREBASE_SEND_INTERVAL 10000  // 10 giây
 
+// Default device ID
+#define DEFAULT_DEVICE_ID "YoloUno-001"
+
 void taskConnectToFirebase(void* pvParameters);
 
 #endif

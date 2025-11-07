@@ -9,5 +9,6 @@
 extern float glob_temperature;
 extern float glob_humidity;
 extern bool glob_pump_state;
+extern String glob_device_id;
 
 #endif

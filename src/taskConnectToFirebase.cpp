@@ -1,6 +1,11 @@
 #include "taskConnectToFirebase.h"
 
+#include "global.h"
+
 HTTPClient http;
+
+// Global device ID variable definition
+String glob_device_id = DEFAULT_DEVICE_ID;
 
 bool sendDataToFirebase(float temperature, float humidity) {
     if (WiFi.status() != WL_CONNECTED) {
