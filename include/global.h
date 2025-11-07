@@ -14,6 +14,12 @@ extern float glob_humidity;
 extern bool glob_pump_state;
 
 // ============================================
+// REMOTE PUMP CONTROL
+// ============================================
+extern bool glob_remote_pump_enabled;  // Bật/tắt điều khiển máy bơm từ xa
+extern String glob_remote_pump_state;  // Trạng thái máy bơm từ Firebase (ON/OFF)
+
+// ============================================
 // DEVICE CONFIGURATION
 // ============================================
 extern String glob_device_id;

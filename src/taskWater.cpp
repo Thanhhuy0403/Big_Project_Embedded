@@ -20,6 +20,22 @@ void taskWater(void* pvParameters) {
     bool shortPressActive = false;
 
     while (1) {
+        // Kiểm tra nếu điều khiển từ xa đang bật, thì tắt điều khiển thủ công
+        if (glob_remote_pump_enabled) {
+            // Nếu đang trong chế độ thủ công, tắt nó
+            if (manualMode || shortPressActive) {
+                manualMode = false;
+                shortPressActive = false;
+                buttonPressed = false;
+                Serial.println("Water: Remote control active, disabling manual control");
+            }
+            // Bỏ qua xử lý button khi điều khiển từ xa đang bật
+            lastButtonState = digitalRead(BUTTON_PIN);
+            vTaskDelay(50 / portTICK_PERIOD_MS);
+            continue;
+        }
+
+        // Chỉ xử lý button khi không có điều khiển từ xa
         bool currentButtonState = digitalRead(BUTTON_PIN);
         if (currentButtonState == LOW && lastButtonState == HIGH) {
             buttonPressed = true;

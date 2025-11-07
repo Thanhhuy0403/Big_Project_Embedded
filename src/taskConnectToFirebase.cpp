@@ -29,7 +29,10 @@ bool sendDataToFirebase(float temperature, float humidity) {
     Serial.println(url);
     Serial.print("Payload: ");
     Serial.println(jsonPayload);
-    int httpResponseCode = http.PUT(jsonPayload);
+    // Sử dụng PATCH thay vì PUT để chỉ cập nhật các field, không ghi đè toàn bộ node
+    // PUT sẽ xóa tất cả các node khác ở cùng level, PATCH chỉ cập nhật các field được chỉ định
+    // Firebase REST API: PATCH method để cập nhật một phần dữ liệu
+    int httpResponseCode = http.sendRequest("PATCH", jsonPayload);
     if (httpResponseCode > 0) {
         Serial.print("Firebase: HTTP Response code: ");
         Serial.println(httpResponseCode);
@@ -85,7 +88,9 @@ bool sendDataToFirebaseNested(float temperature, float humidity) {
     Serial.print("Payload: ");
     Serial.println(jsonPayload);
 
-    int httpResponseCode = http.PUT(jsonPayload);
+    // Sử dụng PATCH thay vì PUT để chỉ cập nhật các field, không ghi đè toàn bộ node
+    // Firebase REST API: PATCH method để cập nhật một phần dữ liệu
+    int httpResponseCode = http.sendRequest("PATCH", jsonPayload);
 
     if (httpResponseCode > 0) {
         Serial.print("Firebase: HTTP Response code: ");
