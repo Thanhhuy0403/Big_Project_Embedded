@@ -1,11 +1,9 @@
 #include "taskConnectToFirebase.h"
 
 #include "global.h"
+#include <Preferences.h>
 
 HTTPClient http;
-
-// Global device ID variable definition
-String glob_device_id = DEFAULT_DEVICE_ID;
 
 bool sendDataToFirebase(float temperature, float humidity) {
     if (WiFi.status() != WL_CONNECTED) {
@@ -119,13 +117,48 @@ void taskConnectToFirebase(void* pvParameters) {
     Serial.println("Task Connect to Firebase: Starting...");
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
+    // Load device config từ Preferences (bao gồm send_interval)
+    Preferences prefs;
+    prefs.begin("device_config", true);
+    String device_id = prefs.getString("device_id", DEFAULT_DEVICE_ID);
+    unsigned long send_interval = prefs.getULong("send_interval", DEFAULT_SEND_INTERVAL);
+    prefs.end();
+    
+    // Cập nhật biến toàn cục với giá trị từ Preferences
+    glob_device_id = device_id;
+    glob_send_interval = send_interval;
+    
+    Serial.println("Firebase Task: Loaded configuration:");
+    Serial.print("  Device ID: ");
+    Serial.println(glob_device_id);
+    Serial.print("  Send Interval: ");
+    Serial.print(glob_send_interval);
+    Serial.println(" ms");
+
     unsigned long lastSendTime = 0;
+    unsigned long lastConfigCheckTime = 0;
+    const unsigned long CONFIG_CHECK_INTERVAL = 5000;  // Kiểm tra config mỗi 5 giây
 
     while (1) {
         if (WiFi.status() == WL_CONNECTED) {
             unsigned long currentTime = millis();
+            
+            // Kiểm tra và cập nhật send_interval từ Preferences định kỳ
+            if (currentTime - lastConfigCheckTime >= CONFIG_CHECK_INTERVAL || lastConfigCheckTime == 0) {
+                prefs.begin("device_config", true);
+                unsigned long new_interval = prefs.getULong("send_interval", DEFAULT_SEND_INTERVAL);
+                prefs.end();
+                
+                if (new_interval != glob_send_interval && new_interval >= 1000 && new_interval <= 600000) {
+                    glob_send_interval = new_interval;
+                    Serial.print("Firebase: Send interval updated to ");
+                    Serial.print(glob_send_interval);
+                    Serial.println(" ms");
+                }
+                lastConfigCheckTime = currentTime;
+            }
 
-            if (currentTime - lastSendTime >= FIREBASE_SEND_INTERVAL || lastSendTime == 0) {
+            if (currentTime - lastSendTime >= glob_send_interval || lastSendTime == 0) {
                 Serial.println("====================");
                 Serial.println("Firebase: Preparing to send data...");
                 Serial.print("Temperature: ");

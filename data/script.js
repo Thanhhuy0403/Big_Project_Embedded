@@ -1,22 +1,65 @@
 function showTab(n) {
     var tabs = document.querySelectorAll('.tab');
     var contents = document.querySelectorAll('.tab-content');
+    
+    // Remove active class with smooth transition
     for (var i = 0; i < tabs.length; i++) {
         tabs[i].classList.remove('active');
-        contents[i].classList.remove('active');
+        if (contents[i].classList.contains('active')) {
+            contents[i].style.opacity = '0';
+            setTimeout(function(idx) {
+                return function() {
+                    contents[idx].classList.remove('active');
+                };
+            }(i), 150);
+        }
     }
-    tabs[n].classList.add('active');
-    contents[n].classList.add('active');
+    
+    // Add active class with smooth transition
+    setTimeout(function() {
+        tabs[n].classList.add('active');
+        contents[n].classList.add('active');
+        contents[n].style.opacity = '0';
+        setTimeout(function() {
+            contents[n].style.opacity = '1';
+        }, 10);
+    }, 150);
+}
+
+function togglePassword(inputId, button) {
+    var input = document.getElementById(inputId);
+    var eyeOpen = button.querySelector('.eye-open');
+    var eyeClosed = button.querySelector('.eye-closed');
+    
+    // Toggle input type
+    if (input.type === 'password') {
+        input.type = 'text';
+        button.setAttribute('aria-label', 'Hide password');
+    } else {
+        input.type = 'password';
+        button.setAttribute('aria-label', 'Show password');
+    }
+    
+    // CSS sẽ tự động xử lý opacity dựa trên input type
+    // Không cần set style trực tiếp vì CSS đã có rules
 }
 
 function showStatus(t, m) {
     var st = document.getElementById('status');
     st.className = 'status ' + t + ' show';
     st.textContent = m;
+    
+    // Auto-hide success messages with smooth fade
     if (t == 'success') {
         setTimeout(function() {
-            st.classList.remove('show');
-        }, 5000);
+            st.style.opacity = '0';
+            st.style.transform = 'translateY(-10px) scale(0.95)';
+            setTimeout(function() {
+                st.classList.remove('show');
+                st.style.opacity = '';
+                st.style.transform = '';
+            }, 300);
+        }, 4000);
     }
 }
 
@@ -92,8 +135,10 @@ function validateDevice() {
 function validateAP() {
     var s = document.getElementById('ap_ssid');
     var p = document.getElementById('ap_password');
+    var i = document.getElementById('ap_send_interval');
     var se = document.getElementById('ap_ssidError');
     var pe = document.getElementById('ap_passwordError');
+    var ie = document.getElementById('ap_send_intervalError');
     
     var v = s.value.trim();
     if (!v) {
@@ -120,6 +165,16 @@ function validateAP() {
     p.classList.remove('error');
     pe.classList.remove('show');
     
+    var iv = parseInt(i.value);
+    if (isNaN(iv) || iv < 1000 || iv > 600000) {
+        i.classList.add('error');
+        ie.textContent = 'Interval must be 1000-600000 ms';
+        ie.classList.add('show');
+        return false;
+    }
+    i.classList.remove('error');
+    ie.classList.remove('show');
+    
     return true;
 }
 
@@ -129,8 +184,9 @@ document.getElementById('wifiForm').addEventListener('submit', async function(e)
     if (!validateWifi()) return;
     
     var btn = document.getElementById('wifiBtn');
+    var originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Testing...';
+    btn.innerHTML = '<span class="loading"></span>Testing...';
     showStatus('info', 'Testing connection...');
     
     var fd = new FormData();
@@ -152,7 +208,8 @@ document.getElementById('wifiForm').addEventListener('submit', async function(e)
             } else {
                 showStatus('error', 'Error: ' + srt);
                 btn.disabled = false;
-                btn.textContent = 'Connect WiFi';
+                btn.textContent = originalText;
+                btn.style.background = '';
             }
         } else {
             var em = '';
@@ -174,12 +231,14 @@ document.getElementById('wifiForm').addEventListener('submit', async function(e)
             }
             showStatus('error', em);
             btn.disabled = false;
-            btn.textContent = 'Connect WiFi';
+            btn.textContent = originalText;
+            btn.style.background = '';
         }
     } catch (err) {
         showStatus('error', 'Error: ' + err.message);
         btn.disabled = false;
-        btn.textContent = 'Connect WiFi';
+        btn.textContent = originalText;
+        btn.style.background = '';
     }
 });
 
@@ -189,8 +248,9 @@ document.getElementById('deviceForm').addEventListener('submit', async function(
     if (!validateDevice()) return;
     
     var btn = document.getElementById('deviceBtn');
+    var originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.innerHTML = '<span class="loading"></span>Saving...';
     showStatus('info', 'Saving device config...');
     
     var fd = new FormData();
@@ -203,20 +263,22 @@ document.getElementById('deviceForm').addEventListener('submit', async function(
         
         if (r.ok) {
             showStatus('success', 'Device config saved!');
-            btn.textContent = 'Saved!';
+            btn.textContent = '✓ Saved!';
+            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
             setTimeout(function() {
                 btn.disabled = false;
-                btn.textContent = 'Save Device Config';
+                btn.textContent = originalText;
+                btn.style.background = '';
             }, 2000);
         } else {
             showStatus('error', 'Error: ' + rt);
             btn.disabled = false;
-            btn.textContent = 'Save Device Config';
+            btn.textContent = originalText;
         }
     } catch (err) {
         showStatus('error', 'Error: ' + err.message);
         btn.disabled = false;
-        btn.textContent = 'Save Device Config';
+        btn.textContent = originalText;
     }
 });
 
@@ -226,13 +288,15 @@ document.getElementById('apForm').addEventListener('submit', async function(e) {
     if (!validateAP()) return;
     
     var btn = document.getElementById('apBtn');
+    var originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.innerHTML = '<span class="loading"></span>Saving...';
     showStatus('info', 'Saving AP config...');
     
     var fd = new FormData();
     fd.append('ap_ssid', document.getElementById('ap_ssid').value.trim());
     fd.append('ap_password', document.getElementById('ap_password').value);
+    fd.append('send_interval', document.getElementById('ap_send_interval').value);
     
     try {
         var r = await fetch('/ap', { method: 'POST', body: fd });
@@ -240,20 +304,22 @@ document.getElementById('apForm').addEventListener('submit', async function(e) {
         
         if (r.ok) {
             showStatus('success', 'AP config saved! Restart required.');
-            btn.textContent = 'Saved!';
+            btn.textContent = '✓ Saved!';
+            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
             setTimeout(function() {
                 btn.disabled = false;
-                btn.textContent = 'Save AP Config';
+                btn.textContent = originalText;
+                btn.style.background = '';
             }, 2000);
         } else {
             showStatus('error', 'Error: ' + rt);
             btn.disabled = false;
-            btn.textContent = 'Save AP Config';
+            btn.textContent = originalText;
         }
     } catch (err) {
         showStatus('error', 'Error: ' + err.message);
         btn.disabled = false;
-        btn.textContent = 'Save AP Config';
+        btn.textContent = originalText;
     }
 });
 
@@ -264,7 +330,10 @@ window.addEventListener('load', async function() {
         if (r.ok) {
             var d = await r.json();
             if (d.device_id) document.getElementById('device_id').value = d.device_id;
-            if (d.send_interval) document.getElementById('send_interval').value = d.send_interval;
+            if (d.send_interval) {
+                document.getElementById('send_interval').value = d.send_interval;
+                document.getElementById('ap_send_interval').value = d.send_interval;
+            }
             if (d.ap_ssid) document.getElementById('ap_ssid').value = d.ap_ssid;
             if (d.ap_password) document.getElementById('ap_password').value = d.ap_password;
         }

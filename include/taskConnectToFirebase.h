@@ -51,11 +51,9 @@
 //   }
 // }
 
-// Khoảng thời gian gửi dữ liệu (milliseconds)
-#define FIREBASE_SEND_INTERVAL 10000  // 10 giây
-
-// Default device ID
-#define DEFAULT_DEVICE_ID "YoloUno-001"
+// Lưu ý: Thời gian gửi dữ liệu (send_interval) được cấu hình thông qua
+// webserver và lưu trong Preferences. Sử dụng biến toàn cục glob_send_interval
+// từ global.h để truy cập giá trị hiện tại.
 
 void taskConnectToFirebase(void* pvParameters);
 

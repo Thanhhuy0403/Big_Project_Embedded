@@ -4,23 +4,12 @@
 #include <Preferences.h>
 #include <LittleFS.h>
 
-// Forward declarations for default values
-#ifndef DEFAULT_DEVICE_ID
-#define DEFAULT_DEVICE_ID "YoloUno-001"
-#endif
-#ifndef DEFAULT_SEND_INTERVAL
-#define DEFAULT_SEND_INTERVAL 10000
-#endif
-#ifndef DEFAULT_AP_SSID
-#define DEFAULT_AP_SSID "YoloUno-Setup-Thanhhuy"
-#endif
-#ifndef DEFAULT_AP_PASSWORD
-#define DEFAULT_AP_PASSWORD "12345678"
-#endif
-
+// Định nghĩa các biến toàn cục
 String wifi_ssid = "";
 String wifi_password = "";
 bool wifi_configured = false;
+String glob_device_id = DEFAULT_DEVICE_ID;
+unsigned long glob_send_interval = DEFAULT_SEND_INTERVAL;
 
 WebServer server(80);
 
@@ -158,9 +147,9 @@ void handleInline() {
         "</head><body><div class=\"container\"><h1>ESP32 Configuration</h1><div class=\"tabs\"><button class=\"tab active\" onclick=\"showTab(0)\">WiFi</button><button class=\"tab\" onclick=\"showTab(1)\">Device</button><button class=\"tab\" onclick=\"showTab(2)\">AP Config</button></div>"
         "<div id=\"tab0\" class=\"tab-content active\"><h2>WiFi Configuration</h2><form id=\"wifiForm\"><div class=\"form-group\"><label for=\"wifi_ssid\">WiFi SSID <span class=\"required\">*</span></label><input type=\"text\" id=\"wifi_ssid\" required placeholder=\"Enter WiFi name\" maxlength=\"32\"><div class=\"error\" id=\"wifi_ssidError\"></div></div><div class=\"form-group\"><label for=\"wifi_password\">Password</label><input type=\"password\" id=\"wifi_password\" placeholder=\"Leave empty if no password\" maxlength=\"64\"><div class=\"error\" id=\"wifi_passwordError\"></div></div><button type=\"submit\" id=\"wifiBtn\">Connect WiFi</button></form></div>"
         "<div id=\"tab1\" class=\"tab-content\"><h2>Device Configuration</h2><form id=\"deviceForm\"><div class=\"form-group\"><label for=\"device_id\">Device ID <span class=\"required\">*</span></label><input type=\"text\" id=\"device_id\" required placeholder=\"Enter device ID\" maxlength=\"32\"><div class=\"error\" id=\"device_idError\"></div></div><div class=\"form-group\"><label for=\"send_interval\">Send Interval (ms) <span class=\"required\">*</span></label><input type=\"number\" id=\"send_interval\" required placeholder=\"10000\" min=\"1000\" max=\"600000\"><div class=\"error\" id=\"send_intervalError\"></div></div><button type=\"submit\" id=\"deviceBtn\">Save Device Config</button></form></div>"
-        "<div id=\"tab2\" class=\"tab-content\"><h2>AP Configuration</h2><form id=\"apForm\"><div class=\"form-group\"><label for=\"ap_ssid\">AP SSID <span class=\"required\">*</span></label><input type=\"text\" id=\"ap_ssid\" required placeholder=\"Enter AP name\" maxlength=\"32\"><div class=\"error\" id=\"ap_ssidError\"></div></div><div class=\"form-group\"><label for=\"ap_password\">AP Password</label><input type=\"password\" id=\"ap_password\" placeholder=\"Enter AP password\" maxlength=\"64\"><div class=\"error\" id=\"ap_passwordError\"></div></div><button type=\"submit\" id=\"apBtn\">Save AP Config</button></form></div>"
+        "<div id=\"tab2\" class=\"tab-content\"><h2>AP Configuration</h2><form id=\"apForm\"><div class=\"form-group\"><label for=\"ap_ssid\">AP SSID <span class=\"required\">*</span></label><input type=\"text\" id=\"ap_ssid\" required placeholder=\"Enter AP name\" maxlength=\"32\"><div class=\"error\" id=\"ap_ssidError\"></div></div><div class=\"form-group\"><label for=\"ap_password\">AP Password</label><input type=\"password\" id=\"ap_password\" placeholder=\"Enter AP password\" maxlength=\"64\"><div class=\"error\" id=\"ap_passwordError\"></div></div><div class=\"form-group\"><label for=\"ap_send_interval\">Firebase Send Interval (ms) <span class=\"required\">*</span></label><input type=\"number\" id=\"ap_send_interval\" required placeholder=\"10000\" min=\"1000\" max=\"600000\"><div class=\"error\" id=\"ap_send_intervalError\"></div></div><button type=\"submit\" id=\"apBtn\">Save AP Config</button></form></div>"
         "<div class=\"status\" id=\"status\"></div></div>"
-        "<script>function showTab(n){var tabs=document.querySelectorAll('.tab');var contents=document.querySelectorAll('.tab-content');for(var i=0;i<tabs.length;i++){tabs[i].classList.remove('active');contents[i].classList.remove('active')}tabs[n].classList.add('active');contents[n].classList.add('active')}function showStatus(t,m){var st=document.getElementById('status');st.className='status '+t+' show';st.textContent=m;if(t=='success')setTimeout(function(){st.classList.remove('show')},5000)}function validateWifi(){var s=document.getElementById('wifi_ssid'),p=document.getElementById('wifi_password'),se=document.getElementById('wifi_ssidError'),pe=document.getElementById('wifi_passwordError');var v=s.value.trim();if(!v){s.classList.add('error');se.textContent='SSID required!';se.classList.add('show');return false}if(v.length>32){s.classList.add('error');se.textContent='Max 32 chars';se.classList.add('show');return false}s.classList.remove('error');se.classList.remove('show');if(p.value.length>64){p.classList.add('error');pe.textContent='Max 64 chars';pe.classList.add('show');return false}p.classList.remove('error');pe.classList.remove('show');return true}function validateDevice(){var d=document.getElementById('device_id'),i=document.getElementById('send_interval'),de=document.getElementById('device_idError'),ie=document.getElementById('send_intervalError');var v=d.value.trim();if(!v){d.classList.add('error');de.textContent='Device ID required!';de.classList.add('show');return false}if(v.length>32){d.classList.add('error');de.textContent='Max 32 chars';de.classList.add('show');return false}d.classList.remove('error');de.classList.remove('show');var iv=parseInt(i.value);if(isNaN(iv)||iv<1000||iv>600000){i.classList.add('error');ie.textContent='Interval must be 1000-600000 ms';ie.classList.add('show');return false}i.classList.remove('error');ie.classList.remove('show');return true}function validateAP(){var s=document.getElementById('ap_ssid'),p=document.getElementById('ap_password'),se=document.getElementById('ap_ssidError'),pe=document.getElementById('ap_passwordError');var v=s.value.trim();if(!v){s.classList.add('error');se.textContent='AP SSID required!';se.classList.add('show');return false}if(v.length>32){s.classList.add('error');se.textContent='Max 32 chars';se.classList.add('show');return false}s.classList.remove('error');se.classList.remove('show');if(p.value.length>64){p.classList.add('error');pe.textContent='Max 64 chars';pe.classList.add('show');return false}p.classList.remove('error');pe.classList.remove('show');return true}document.getElementById('wifiForm').addEventListener('submit',async function(e){e.preventDefault();if(!validateWifi())return;var btn=document.getElementById('wifiBtn');btn.disabled=true;btn.textContent='Testing...';showStatus('info','Testing connection...');var fd=new FormData();fd.append('ssid',document.getElementById('wifi_ssid').value.trim());fd.append('password',document.getElementById('wifi_password').value);try{var tr=await fetch('/test',{method:'POST',body:fd}),trt=await tr.text();if(trt=='SUCCESS'){var sr=await fetch('/connect',{method:'POST',body:fd}),srt=await sr.text();if(sr.ok){showStatus('success','WiFi configured!');btn.textContent='Connected!';btn.style.background='#28a745'}else{showStatus('error','Error: '+srt);btn.disabled=false;btn.textContent='Connect WiFi'}}else{var em='';switch(trt){case 'SSID_NOT_FOUND':em='Network not found';break;case 'WRONG_PASSWORD':em='Wrong password';break;case 'CONNECTION_FAILED':em='Connection failed';break;case 'TIMEOUT':em='Timeout';break;default:em='Failed: '+trt}showStatus('error',em);btn.disabled=false;btn.textContent='Connect WiFi'}}catch(err){showStatus('error','Error: '+err.message);btn.disabled=false;btn.textContent='Connect WiFi'}});document.getElementById('deviceForm').addEventListener('submit',async function(e){e.preventDefault();if(!validateDevice())return;var btn=document.getElementById('deviceBtn');btn.disabled=true;btn.textContent='Saving...';showStatus('info','Saving device config...');var fd=new FormData();fd.append('device_id',document.getElementById('device_id').value.trim());fd.append('send_interval',document.getElementById('send_interval').value);try{var r=await fetch('/device',{method:'POST',body:fd}),rt=await r.text();if(r.ok){showStatus('success','Device config saved!');btn.textContent='Saved!';setTimeout(function(){btn.disabled=false;btn.textContent='Save Device Config'},2000)}else{showStatus('error','Error: '+rt);btn.disabled=false;btn.textContent='Save Device Config'}}catch(err){showStatus('error','Error: '+err.message);btn.disabled=false;btn.textContent='Save Device Config'}});document.getElementById('apForm').addEventListener('submit',async function(e){e.preventDefault();if(!validateAP())return;var btn=document.getElementById('apBtn');btn.disabled=true;btn.textContent='Saving...';showStatus('info','Saving AP config...');var fd=new FormData();fd.append('ap_ssid',document.getElementById('ap_ssid').value.trim());fd.append('ap_password',document.getElementById('ap_password').value);try{var r=await fetch('/ap',{method:'POST',body:fd}),rt=await r.text();if(r.ok){showStatus('success','AP config saved! Restart required.');btn.textContent='Saved!';setTimeout(function(){btn.disabled=false;btn.textContent='Save AP Config'},2000)}else{showStatus('error','Error: '+rt);btn.disabled=false;btn.textContent='Save AP Config'}}catch(err){showStatus('error','Error: '+err.message);btn.disabled=false;btn.textContent='Save AP Config'}});window.addEventListener('load',async function(){try{var r=await fetch('/config');if(r.ok){var d=await r.json();if(d.device_id)document.getElementById('device_id').value=d.device_id;if(d.send_interval)document.getElementById('send_interval').value=d.send_interval;if(d.ap_ssid)document.getElementById('ap_ssid').value=d.ap_ssid;if(d.ap_password)document.getElementById('ap_password').value=d.ap_password}}catch(err){console.log('Failed to load config:',err)}});</script></body></html>"
+        "<script>function showTab(n){var tabs=document.querySelectorAll('.tab');var contents=document.querySelectorAll('.tab-content');for(var i=0;i<tabs.length;i++){tabs[i].classList.remove('active');contents[i].classList.remove('active')}tabs[n].classList.add('active');contents[n].classList.add('active')}function showStatus(t,m){var st=document.getElementById('status');st.className='status '+t+' show';st.textContent=m;if(t=='success')setTimeout(function(){st.classList.remove('show')},5000)}function validateWifi(){var s=document.getElementById('wifi_ssid'),p=document.getElementById('wifi_password'),se=document.getElementById('wifi_ssidError'),pe=document.getElementById('wifi_passwordError');var v=s.value.trim();if(!v){s.classList.add('error');se.textContent='SSID required!';se.classList.add('show');return false}if(v.length>32){s.classList.add('error');se.textContent='Max 32 chars';se.classList.add('show');return false}s.classList.remove('error');se.classList.remove('show');if(p.value.length>64){p.classList.add('error');pe.textContent='Max 64 chars';pe.classList.add('show');return false}p.classList.remove('error');pe.classList.remove('show');return true}function validateDevice(){var d=document.getElementById('device_id'),i=document.getElementById('send_interval'),de=document.getElementById('device_idError'),ie=document.getElementById('send_intervalError');var v=d.value.trim();if(!v){d.classList.add('error');de.textContent='Device ID required!';de.classList.add('show');return false}if(v.length>32){d.classList.add('error');de.textContent='Max 32 chars';de.classList.add('show');return false}d.classList.remove('error');de.classList.remove('show');var iv=parseInt(i.value);if(isNaN(iv)||iv<1000||iv>600000){i.classList.add('error');ie.textContent='Interval must be 1000-600000 ms';ie.classList.add('show');return false}i.classList.remove('error');ie.classList.remove('show');return true}function validateAP(){var s=document.getElementById('ap_ssid'),p=document.getElementById('ap_password'),i=document.getElementById('ap_send_interval'),se=document.getElementById('ap_ssidError'),pe=document.getElementById('ap_passwordError'),ie=document.getElementById('ap_send_intervalError');var v=s.value.trim();if(!v){s.classList.add('error');se.textContent='AP SSID required!';se.classList.add('show');return false}if(v.length>32){s.classList.add('error');se.textContent='Max 32 chars';se.classList.add('show');return false}s.classList.remove('error');se.classList.remove('show');if(p.value.length>64){p.classList.add('error');pe.textContent='Max 64 chars';pe.classList.add('show');return false}p.classList.remove('error');pe.classList.remove('show');var iv=parseInt(i.value);if(isNaN(iv)||iv<1000||iv>600000){i.classList.add('error');ie.textContent='Interval must be 1000-600000 ms';ie.classList.add('show');return false}i.classList.remove('error');ie.classList.remove('show');return true}document.getElementById('wifiForm').addEventListener('submit',async function(e){e.preventDefault();if(!validateWifi())return;var btn=document.getElementById('wifiBtn');btn.disabled=true;btn.textContent='Testing...';showStatus('info','Testing connection...');var fd=new FormData();fd.append('ssid',document.getElementById('wifi_ssid').value.trim());fd.append('password',document.getElementById('wifi_password').value);try{var tr=await fetch('/test',{method:'POST',body:fd}),trt=await tr.text();if(trt=='SUCCESS'){var sr=await fetch('/connect',{method:'POST',body:fd}),srt=await sr.text();if(sr.ok){showStatus('success','WiFi configured!');btn.textContent='Connected!';btn.style.background='#28a745'}else{showStatus('error','Error: '+srt);btn.disabled=false;btn.textContent='Connect WiFi'}}else{var em='';switch(trt){case 'SSID_NOT_FOUND':em='Network not found';break;case 'WRONG_PASSWORD':em='Wrong password';break;case 'CONNECTION_FAILED':em='Connection failed';break;case 'TIMEOUT':em='Timeout';break;default:em='Failed: '+trt}showStatus('error',em);btn.disabled=false;btn.textContent='Connect WiFi'}}catch(err){showStatus('error','Error: '+err.message);btn.disabled=false;btn.textContent='Connect WiFi'}});document.getElementById('deviceForm').addEventListener('submit',async function(e){e.preventDefault();if(!validateDevice())return;var btn=document.getElementById('deviceBtn');btn.disabled=true;btn.textContent='Saving...';showStatus('info','Saving device config...');var fd=new FormData();fd.append('device_id',document.getElementById('device_id').value.trim());fd.append('send_interval',document.getElementById('send_interval').value);try{var r=await fetch('/device',{method:'POST',body:fd}),rt=await r.text();if(r.ok){showStatus('success','Device config saved!');btn.textContent='Saved!';setTimeout(function(){btn.disabled=false;btn.textContent='Save Device Config'},2000)}else{showStatus('error','Error: '+rt);btn.disabled=false;btn.textContent='Save Device Config'}}catch(err){showStatus('error','Error: '+err.message);btn.disabled=false;btn.textContent='Save Device Config'}});document.getElementById('apForm').addEventListener('submit',async function(e){e.preventDefault();if(!validateAP())return;var btn=document.getElementById('apBtn');btn.disabled=true;btn.textContent='Saving...';showStatus('info','Saving AP config...');var fd=new FormData();fd.append('ap_ssid',document.getElementById('ap_ssid').value.trim());fd.append('ap_password',document.getElementById('ap_password').value);fd.append('send_interval',document.getElementById('ap_send_interval').value);try{var r=await fetch('/ap',{method:'POST',body:fd}),rt=await r.text();if(r.ok){showStatus('success','AP config saved! Restart required.');btn.textContent='Saved!';setTimeout(function(){btn.disabled=false;btn.textContent='Save AP Config'},2000)}else{showStatus('error','Error: '+rt);btn.disabled=false;btn.textContent='Save AP Config'}}catch(err){showStatus('error','Error: '+err.message);btn.disabled=false;btn.textContent='Save AP Config'}});window.addEventListener('load',async function(){try{var r=await fetch('/config');if(r.ok){var d=await r.json();if(d.device_id)document.getElementById('device_id').value=d.device_id;if(d.send_interval){document.getElementById('send_interval').value=d.send_interval;document.getElementById('ap_send_interval').value=d.send_interval}if(d.ap_ssid)document.getElementById('ap_ssid').value=d.ap_ssid;if(d.ap_password)document.getElementById('ap_password').value=d.ap_password}}catch(err){console.log('Failed to load config:',err)}});</script></body></html>"
     );
 }
 
@@ -267,6 +256,7 @@ void handleDevice() {
     
     saveDeviceConfigToPreferences(device_id, send_interval);
     glob_device_id = device_id;
+    glob_send_interval = send_interval;  // Cập nhật biến toàn cục
     
     Serial.println("====================");
     Serial.println("Device Configuration saved:");
@@ -299,6 +289,29 @@ void handleAP() {
         return;
     }
     
+    // Xử lý send_interval nếu có trong request (từ tab AP Config)
+    bool send_interval_updated = false;
+    if (server.hasArg("send_interval")) {
+        unsigned long send_interval = server.arg("send_interval").toInt();
+        if (send_interval >= 1000 && send_interval <= 600000) {
+            // Lưu send_interval vào Preferences cùng với device_id hiện tại
+            String current_device_id = glob_device_id;
+            if (current_device_id.length() == 0) {
+                current_device_id = DEFAULT_DEVICE_ID;
+            }
+            saveDeviceConfigToPreferences(current_device_id, send_interval);
+            glob_send_interval = send_interval;  // Cập nhật biến toàn cục
+            send_interval_updated = true;
+            
+            Serial.println("====================");
+            Serial.println("Send Interval updated from AP Config:");
+            Serial.print("Send Interval: ");
+            Serial.print(send_interval);
+            Serial.println(" ms");
+            Serial.println("====================");
+        }
+    }
+    
     saveAPConfigToPreferences(ap_ssid, ap_password);
     
     Serial.println("====================");
@@ -307,14 +320,40 @@ void handleAP() {
     Serial.println(ap_ssid);
     Serial.print("AP Password: ");
     Serial.println(ap_password.length() > 0 ? "***" : "(empty)");
+    if (send_interval_updated) {
+        Serial.println("Send Interval also updated!");
+    }
     Serial.println("Note: ESP32 needs to restart to apply new AP config");
     Serial.println("====================");
     
-    server.send(200, "text/plain", "AP config saved successfully! Restart required.");
+    String response = "AP config saved successfully!";
+    if (send_interval_updated) {
+        response += " Send interval updated to " + String(glob_send_interval) + " ms.";
+    }
+    response += " Restart required for AP changes.";
+    server.send(200, "text/plain", response);
 }
 
 void taskWebServer(void* pvParameters) {
     Serial.println("Task Web Server: Starting...");
+    
+    // Load device config from Preferences (bao gồm send_interval)
+    String device_id;
+    unsigned long send_interval;
+    if (loadDeviceConfigFromPreferences(device_id, send_interval)) {
+        glob_device_id = device_id;
+        glob_send_interval = send_interval;
+        Serial.println("Device config loaded from Preferences:");
+        Serial.print("  Device ID: ");
+        Serial.println(device_id);
+        Serial.print("  Send Interval: ");
+        Serial.print(send_interval);
+        Serial.println(" ms");
+    } else {
+        Serial.println("Using default device config");
+        glob_device_id = DEFAULT_DEVICE_ID;
+        glob_send_interval = DEFAULT_SEND_INTERVAL;
+    }
     
     // Initialize LittleFS
     bool fsMounted = LittleFS.begin(true);
