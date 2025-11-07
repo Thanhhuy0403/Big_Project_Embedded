@@ -3,24 +3,22 @@
 void taskConnectWifi(void* pvParameters) {
     Serial.println("Task Connect WiFi: Starting...");
     Serial.println("Waiting for WiFi configuration from web server...");
-    
+
     // Đợi cho đến khi có thông tin WiFi từ web form
     while (!wifi_configured) {
         Serial.println("Waiting for WiFi credentials...");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
-    
+
     Serial.println("WiFi credentials received! Starting connection...");
     Serial.print("SSID: ");
     Serial.println(wifi_ssid);
     Serial.print("Password: ");
     Serial.println(wifi_password);
-    
-    // Kết nối WiFi (vẫn giữ AP mode để webserver vẫn hoạt động)
-    // WiFi đã ở mode AP_STA từ webserver, chỉ cần kết nối
+
     WiFi.disconnect();
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    
+
     Serial.print("Connecting to WiFi: ");
     Serial.println(wifi_ssid);
     WiFi.begin(wifi_ssid.c_str(), wifi_password.c_str());
@@ -38,11 +36,6 @@ void taskConnectWifi(void* pvParameters) {
         Serial.println("WiFi connected!");
         Serial.print("IP address: ");
         Serial.println(WiFi.localIP());
-        Serial.print("MAC address: ");
-        Serial.println(WiFi.macAddress());
-        Serial.print("RSSI: ");
-        Serial.print(WiFi.RSSI());
-        Serial.println(" dBm");
     } else {
         Serial.println("WiFi connection failed!");
         Serial.println("Please check SSID and password.");

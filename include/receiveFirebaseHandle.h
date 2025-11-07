@@ -14,12 +14,15 @@
 // ============================================
 // Path trong Firebase để fetch dữ liệu điều khiển máy bơm
 #define FIREBASE_PUMP_CONTROL_PATH "/realtime-pump"
+// Path trong Firebase để fetch dữ liệu điều khiển LED
+#define FIREBASE_LED_CONTROL_PATH "/status-led"
 
 // Khoảng thời gian giữa các lần fetch dữ liệu (ms)
 #define FIREBASE_FETCH_INTERVAL 2000  // 2 giây
 
 // Hàm fetch dữ liệu từ Firebase
 bool fetchPumpControlFromFirebase(String& pumpState);
+bool fetchLedControlFromFirebase(String& ledState);
 
 // Task chính để nhận và xử lý dữ liệu từ Firebase
 void taskReceiveFirebaseHandle(void* pvParameters);

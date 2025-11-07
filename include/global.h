@@ -20,6 +20,12 @@ extern bool glob_remote_pump_enabled;  // Bật/tắt điều khiển máy bơm 
 extern String glob_remote_pump_state;  // Trạng thái máy bơm từ Firebase (ON/OFF)
 
 // ============================================
+// REMOTE LED CONTROL
+// ============================================
+extern bool glob_remote_led_enabled;  // Bật/tắt điều khiển LED từ xa
+extern String glob_remote_led_state;  // Trạng thái LED từ Firebase (ON/OFF)
+
+// ============================================
 // DEVICE CONFIGURATION
 // ============================================
 extern String glob_device_id;

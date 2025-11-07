@@ -1,4 +1,5 @@
 #include "taskNeoBlinky.h"
+#include "global.h"
 
 void calculateColorFromTempHumi(float temp, float humi, uint16_t& hue, uint8_t& saturation, uint8_t& brightness) {
     if (temp < -10.0) temp = -10.0;
@@ -43,6 +44,20 @@ void taskNeoBlinky(void* pvParameters) {
     strip.setBrightness(200);
 
     while (1) {
+        // Kiểm tra trạng thái LED từ Firebase
+        if (glob_remote_led_enabled) {
+            // Nếu điều khiển từ xa được bật, kiểm tra trạng thái
+            if (glob_remote_led_state == "OFF") {
+                // Tắt LED nếu trạng thái là OFF
+                strip.clear();
+                strip.show();
+                vTaskDelay(500 / portTICK_PERIOD_MS);
+                continue;
+            }
+            // Nếu trạng thái là ON, tiếp tục hiển thị màu bình thường
+        }
+        
+        // Hiển thị LED dựa trên temperature và humidity
         float temp = glob_temperature;
         float humi = glob_humidity;
         uint16_t hue;
