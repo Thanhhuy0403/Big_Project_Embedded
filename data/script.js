@@ -323,6 +323,146 @@ document.getElementById('apForm').addEventListener('submit', async function(e) {
     }
 });
 
+// WiFi Scan Functions
+async function scanWiFi() {
+    var scanBtn = document.getElementById('scanBtn');
+    var scanBtnText = document.getElementById('scanBtnText');
+    var wifiList = document.getElementById('wifiList');
+    
+    scanBtn.disabled = true;
+    scanBtnText.textContent = 'Scanning...';
+    wifiList.innerHTML = '<div class="wifi-loading">Scanning for WiFi networks...</div>';
+    
+    try {
+        var response = await fetch('/scan');
+        if (!response.ok) {
+            throw new Error('Scan failed');
+        }
+        
+        var networks = await response.json();
+        
+        if (networks.length === 0) {
+            wifiList.innerHTML = '<div class="wifi-empty">No WiFi networks found. Please try again.</div>';
+            scanBtn.disabled = false;
+            scanBtnText.textContent = 'Scan WiFi Networks';
+            return;
+        }
+        
+        // Sort by RSSI (signal strength) - strongest first
+        networks.sort(function(a, b) {
+            return b.rssi - a.rssi;
+        });
+        
+        // Remove duplicates (keep strongest signal)
+        var uniqueNetworks = [];
+        var seenSSIDs = {};
+        for (var i = 0; i < networks.length; i++) {
+            var ssid = networks[i].ssid;
+            if (!seenSSIDs[ssid]) {
+                seenSSIDs[ssid] = true;
+                uniqueNetworks.push(networks[i]);
+            }
+        }
+        
+        // Display networks
+        wifiList.innerHTML = '';
+        uniqueNetworks.forEach(function(network) {
+            var wifiItem = document.createElement('div');
+            wifiItem.className = 'wifi-item';
+            wifiItem.onclick = function() {
+                selectWiFi(network.ssid, network.encryption);
+            };
+            
+            var signalBars = getSignalBars(network.rssi);
+            var lockIcon = network.encryption ? 
+                '<svg class="lock-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>' : 
+                '<svg class="lock-icon open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5v4"></path></svg>';
+            
+            wifiItem.innerHTML = 
+                '<div class="wifi-item-content">' +
+                    '<div class="wifi-info">' +
+                        '<div class="wifi-name">' + escapeHtml(network.ssid) + '</div>' +
+                        '<div class="wifi-details">' + signalBars + '</div>' +
+                    '</div>' +
+                    '<div class="wifi-icons">' +
+                        lockIcon +
+                        '<svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>' +
+                    '</div>' +
+                '</div>';
+            
+            wifiList.appendChild(wifiItem);
+        });
+        
+        scanBtn.disabled = false;
+        scanBtnText.textContent = 'Scan WiFi Networks';
+        
+    } catch (err) {
+        wifiList.innerHTML = '<div class="wifi-error">Error scanning WiFi: ' + err.message + '</div>';
+        scanBtn.disabled = false;
+        scanBtnText.textContent = 'Scan WiFi Networks';
+    }
+}
+
+function getSignalBars(rssi) {
+    var bars = '';
+    var strength = '';
+    var className = '';
+    
+    if (rssi >= -50) {
+        bars = '▮▮▮▮';
+        strength = 'Excellent';
+        className = 'signal-excellent';
+    } else if (rssi >= -60) {
+        bars = '▮▮▮▯';
+        strength = 'Good';
+        className = 'signal-good';
+    } else if (rssi >= -70) {
+        bars = '▮▮▯▯';
+        strength = 'Fair';
+        className = 'signal-fair';
+    } else {
+        bars = '▮▯▯▯';
+        strength = 'Weak';
+        className = 'signal-weak';
+    }
+    
+    return '<span class="signal-bars ' + className + '">' + bars + '</span> <span class="signal-text">' + strength + '</span>';
+}
+
+function selectWiFi(ssid, hasEncryption) {
+    document.getElementById('wifi_ssid').value = ssid;
+    document.getElementById('wifi_ssid').focus();
+    
+    // Clear password field
+    document.getElementById('wifi_password').value = '';
+    
+    // Highlight selected WiFi in list
+    var wifiItems = document.querySelectorAll('.wifi-item');
+    wifiItems.forEach(function(item) {
+        item.classList.remove('selected');
+        if (item.textContent.includes(ssid)) {
+            item.classList.add('selected');
+        }
+    });
+    
+    // Scroll to form
+    document.getElementById('wifi_ssid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Attach scan button event
+document.addEventListener('DOMContentLoaded', function() {
+    var scanBtn = document.getElementById('scanBtn');
+    if (scanBtn) {
+        scanBtn.addEventListener('click', scanWiFi);
+    }
+});
+
 // Load config on page load
 window.addEventListener('load', async function() {
     try {

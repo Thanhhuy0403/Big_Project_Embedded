@@ -96,6 +96,27 @@ bool saveAPConfigToPreferences(const String& ap_ssid, const String& ap_password)
     return success;
 }
 
+String escapeJsonString(String str) {
+    String escaped = "";
+    for (unsigned int i = 0; i < str.length(); i++) {
+        char c = str.charAt(i);
+        if (c == '"') {
+            escaped += "\\\"";
+        } else if (c == '\\') {
+            escaped += "\\\\";
+        } else if (c == '\n') {
+            escaped += "\\n";
+        } else if (c == '\r') {
+            escaped += "\\r";
+        } else if (c == '\t') {
+            escaped += "\\t";
+        } else {
+            escaped += c;
+        }
+    }
+    return escaped;
+}
+
 String getContentType(String filename) {
     if (filename.endsWith(".html"))
         return "text/html";
@@ -276,6 +297,47 @@ void handleDevice() {
     server.send(200, "text/plain", "Device config saved successfully!");
 }
 
+void handleScan() {
+    Serial.println("WiFi scan requested...");
+    
+    // Disconnect from current WiFi if connected to allow scanning
+    WiFi.disconnect();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    
+    // Start scan (blocking call)
+    int n = WiFi.scanNetworks();
+    
+    if (n < 0) {
+        server.send(500, "application/json", "{\"error\":\"Scan failed\"}");
+        Serial.println("WiFi scan failed");
+        return;
+    }
+    
+    if (n == 0) {
+        server.send(200, "application/json", "[]");
+        Serial.println("No networks found");
+        return;
+    }
+    
+    // Build JSON array
+    String json = "[";
+    for (int i = 0; i < n; i++) {
+        if (i > 0) json += ",";
+        json += "{";
+        json += "\"ssid\":\"" + escapeJsonString(WiFi.SSID(i)) + "\",";
+        json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
+        json += "\"encryption\":" + String((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? 0 : 1);
+        json += "}";
+    }
+    json += "]";
+    
+    Serial.print("Found ");
+    Serial.print(n);
+    Serial.println(" networks");
+    
+    server.send(200, "application/json", json);
+}
+
 void handleAP() {
     if (!server.hasArg("ap_ssid")) {
         server.send(400, "text/plain", "Error: ap_ssid is required");
@@ -418,6 +480,7 @@ void taskWebServer(void* pvParameters) {
     server.on("/", handleRoot);
     server.on("/inline", handleInline);
     server.on("/config", handleConfig);
+    server.on("/scan", handleScan);
     server.on("/test", HTTP_POST, handleTest);
     server.on("/connect", HTTP_POST, handleConnect);
     server.on("/device", HTTP_POST, handleDevice);
